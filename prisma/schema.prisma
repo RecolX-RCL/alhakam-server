@@ -1,0 +1,56 @@
+// Prisma schema for Aluminum Workshop Manager
+// Customer invoicing + payments system with multi-currency (USD / SYP)
+//
+// === DEPLOYMENT INSTRUCTIONS ===
+// In development (this sandbox): provider = "postgresql" + file URL
+// In production (Vercel + Supabase/Neon): switch to provider = "postgresql"
+//   1. Change `provider = "postgresql"` below
+//   2. Set DATABASE_URL env var on Vercel to your Supabase/Neon connection string
+//   3. Run `bun run db:push` once to create the tables
+//   4. Redeploy
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id         String    @id @default(cuid())
+  name       String
+  phone      String?
+  notes      String?
+  accessCode String    @unique // 6-digit code the customer uses to log in
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  charges   Charge[]
+  payments  Payment[]
+}
+
+model Charge {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  description String   // e.g. "شبابيك ألمنيوم، عدد 5"
+  amount      Float
+  currency    String   // "USD" or "SYP"
+  status      String   @default("in_progress") // "in_progress" | "completed"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Payment {
+  id          String    @id @default(cuid())
+  customerId  String
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  amount      Float
+  currency    String    // "USD" or "SYP"
+  status      String    @default("pending") // "pending" | "confirmed"
+  note        String?
+  createdAt   DateTime  @default(now())
+  confirmedAt DateTime?
+}
