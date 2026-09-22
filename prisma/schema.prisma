@@ -1,21 +1,20 @@
 // Prisma schema for Aluminum Workshop Manager
 // Customer invoicing + payments system with multi-currency (USD / SYP)
 //
-// === DEPLOYMENT INSTRUCTIONS ===
-// In development (this sandbox): provider = "postgresql" + file URL
-// In production (Vercel + Supabase/Neon): switch to provider = "postgresql"
-//   1. Change `provider = "postgresql"` below
-//   2. Set DATABASE_URL env var on Vercel to your Supabase/Neon connection string
-//   3. Run `bun run db:push` once to create the tables
-//   4. Redeploy
+// Supabase connection setup:
+//  - DATABASE_URL  → transaction-mode pooler (port 6543) — for runtime queries
+//  - DIRECT_URL    → session-mode pooler (port 5432) — for migrations / db push
+//
+// Both URLs come from Supabase → Database → Connect → ORMs → Prisma
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Customer {
@@ -23,7 +22,7 @@ model Customer {
   name       String
   phone      String?
   notes      String?
-  accessCode String    @unique // 6-digit code the customer uses to log in
+  accessCode String    @unique
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -35,10 +34,10 @@ model Charge {
   id          String   @id @default(cuid())
   customerId  String
   customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  description String   // e.g. "شبابيك ألمنيوم، عدد 5"
+  description String
   amount      Float
-  currency    String   // "USD" or "SYP"
-  status      String   @default("in_progress") // "in_progress" | "completed"
+  currency    String
+  status      String   @default("in_progress")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -48,8 +47,8 @@ model Payment {
   customerId  String
   customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   amount      Float
-  currency    String    // "USD" or "SYP"
-  status      String    @default("pending") // "pending" | "confirmed"
+  currency    String
+  status      String    @default("pending")
   note        String?
   createdAt   DateTime  @default(now())
   confirmedAt DateTime?
