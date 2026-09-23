@@ -1,3 +1,4 @@
+typescript
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyAdminAuth } from "@/lib/auth";
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const { id } = await ctx.params;
   try {
     const body = await req.json();
-    const { amount, currency, note } = body;
+    const { amount, currency, note, chargeId } = body;
     const num = Number(amount);
     if (!Number.isFinite(num) || num <= 0) {
       return NextResponse.json({ error: "المبلغ غير صالح" }, { status: 400 });
@@ -24,8 +25,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: "الزبون غير موجود" }, { status: 404 });
     }
 
-    // New payments created by admin start as "pending" — the customer must
-    // confirm them before they are counted as paid.
+    let finalChargeId: string | null = null;
+    if (chargeId) {
+      const charge = await db.charge.findUnique({ where: { id: chargeId } });
+      if (!charge || charge.customerId !== id) {
+        return NextResponse.json({ error: "الورشة غير موجودة لهذا الزبون" }, { status: 400 });
+      }
+      finalChargeId = chargeId;
+    }
+
     const payment = await db.payment.create({
       data: {
         customerId: id,
@@ -33,6 +41,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         currency,
         note: note?.trim() || null,
         status: "pending",
+        chargeId: finalChargeId,
       },
     });
     return NextResponse.json({ payment });
