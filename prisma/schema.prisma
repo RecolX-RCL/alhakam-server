@@ -1,3 +1,4 @@
+prisma
 // Prisma schema for Aluminum Workshop Manager
 // Customer invoicing + payments system with multi-currency (USD / SYP)
 //
@@ -40,6 +41,8 @@ model Charge {
   status      String   @default("in_progress")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  payments Payment[]
 }
 
 model Payment {
@@ -52,4 +55,7 @@ model Payment {
   note        String?
   createdAt   DateTime  @default(now())
   confirmedAt DateTime?
+
+  chargeId    String?
+  charge       Charge?  @relation(fields: [chargeId], references: [id], onDelete: SetNull)
 }
